@@ -18,5 +18,29 @@
     "dependencies": [],
     "schedule": "Asap",
     "priority": "high"
+  },
+  {
+    "task_id": "T1244",
+    "type": "2",
+    "description": "Appraise Siva on near DR project",
+    "status": "active",
+    "actions": [
+      "Organize meeting",
+      "Discuss project details"
+    ],
+    "people": {
+      "owner": "User",
+      "final_beneficiary": "Siva",
+      "stakeholders": [
+        "User",
+        "Siva",
+        "Eby",
+        "Naveen",
+        "Sashi"
+      ]
+    },
+    "dependencies": [],
+    "schedule": "",
+    "priority": "high"
   }
 ]
