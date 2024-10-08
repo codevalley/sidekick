@@ -3,7 +3,7 @@
     "task_id": "T1241",
     "type": "1",
     "description": "Send the list of Engineering owners for all pods to Ramki",
-    "status": "active",
+    "status": "completed",
     "actions": [
       "Send email"
     ],

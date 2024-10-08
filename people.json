@@ -10,10 +10,14 @@
   {
     "person_id": "P1005",
     "name": "Siva",
-    "designation": "Manager",
+    "designation": "",
     "relationship": "Colleague",
     "importance": "high",
-    "notes": "Needs to be appraised on near DR project"
+    "notes": "Needs to be appraised on near DR project",
+    "contact": {
+      "email": "siva@zeta.tech",
+      "phone": "9447303683"
+    }
   },
   {
     "person_id": "P1007",
