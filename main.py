@@ -62,7 +62,7 @@ def process_data(data):
 
     people, new_people, updated_people = update_or_add(people, data.get('people', []), 'person_id')
     tasks, new_tasks, updated_tasks = update_or_add(tasks, data.get('tasks', []), 'task_id')
-    topics, new_topics, updated_topics = update_or_add(topics, data.get('contexts', []), 'context_id')
+    topics, new_topics, updated_topics = update_or_add(topics, data.get('knowledge', []), 'knowledge_id')
 
     save_json_file('people.json', people)
     save_json_file('tasks.json', tasks)
@@ -80,9 +80,9 @@ def process_data(data):
         console.print(f"[bold yellow]Updated task:[/bold yellow] {task['description']}")
     
     for topic in new_topics:
-        console.print(f"[bold green]Added a new context:[/bold green] {topic['topic']}")
+        console.print(f"[bold green]Added a new knowledge entry:[/bold green] {topic['topic']}")
     for topic in updated_topics:
-        console.print(f"[bold yellow]Updated context:[/bold yellow] {topic['topic']}")
+        console.print(f"[bold yellow]Updated knowledge entry:[/bold yellow] {topic['topic']}")
 
 def get_task_summary():
     context = {
@@ -94,7 +94,7 @@ def get_task_summary():
     messages = [
         {"role": "system", "content": config['system_prompt']},
         {"role": "user", "content": f"Current context: {json.dumps(context)}"},
-        {"role": "user", "content": "Summarize my tasks"}
+        {"role": "user", "content": "Provide an overview of all tasks, people, and knowledge entries."}
     ]
     
     response = call_openai_api(messages)
@@ -141,7 +141,7 @@ def main():
         context = {
             'people': load_json_file('people.json'),
             'tasks': load_json_file('tasks.json'),
-            'topics': load_json_file('topics.json')
+            'knowledge': load_json_file('knowledge.json')
         }
 
         messages = [
