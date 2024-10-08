@@ -3,3 +3,4 @@ venv/
 tasks.json
 people.json
 topics.json
+config.yaml
