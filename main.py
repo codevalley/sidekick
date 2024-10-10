@@ -109,7 +109,7 @@ def construct_prompt(conversation_history=None):
     # Construct messages for the LLM
     messages = [
         {"role": "system", "content": config['system_prompt']},
-        {"role": "user", "content": f"Current context: {json.dumps(context)}"},
+        {"role": "user", "content": f"Current context (datastore): {json.dumps(context)}"},
         {"role": "user", "content": f"Current date and time: {current_datetime}"}
     ]
     
@@ -168,7 +168,7 @@ def main():
 
         # Get response from LLM
         llm_response = call_openai_api(messages)
-
+        print(llm_response)
         if llm_response is None:
             console.print("[bold red]An error occurred. Please try again.[/bold red]")
             continue
