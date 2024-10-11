@@ -7,7 +7,6 @@ from prompt_toolkit import PromptSession
 from prompt_toolkit.styles import Style
 from rich.console import Console
 from rich.panel import Panel
-from rich.spinner import Spinner
 from rich.markup import escape
 from rich.markdown import Markdown
 from rich.text import Text
@@ -37,13 +36,20 @@ def save_json_file(filename, data):
         json.dump(data, f, indent=2)
 
 # Call OpenAI API with given messages
-def call_openai_api(messages):
+def call_openai_api(system_prompt, datastore, conversation_history):
     try:
-        with console.status("[bold green]Thinking...", spinner="dots") as status:
+        with console.status("[bold green]Thinking...", spinner="dots"):
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "system", "content": f"Datastore: {json.dumps(datastore)}"},
+            ]
+            messages.extend(conversation_history)
+
             response = openai.ChatCompletion.create(
                 model="gpt-4o-mini-2024-07-18",
                 messages=messages
             )
+
         return json.loads(response.choices[0].message.content)
     except json.JSONDecodeError:
         console.print("[bold red]Error:[/bold red] Unable to parse OpenAI response as JSON.")
@@ -72,7 +78,7 @@ def process_data(data):
     # Update people, tasks, and topics
     people, new_people, updated_people = update_or_add(people, data.get('people', []), 'person_id')
     tasks, new_tasks, updated_tasks = update_or_add(tasks, data.get('tasks', []), 'task_id')
-    topics, new_topics, updated_topics = update_or_add(topics, data.get('knowledge', []), 'knowledge_id')
+    topics, new_topics, updated_topics = update_or_add(topics, data.get('topics', []), 'topics_id')
 
     # Save updated data to JSON files
     save_json_file('people.json', people)
@@ -84,46 +90,37 @@ def process_data(data):
         console.print(f"[bold green]Added a new contact:[/bold green] {person['name']} | {person['importance']} priority")
     for person in updated_people:
         console.print(f"[bold yellow]Updated contact:[/bold yellow] {person['name']}")
-    
+
     for task in new_tasks:
         console.print(f"[bold green]Added a new task:[/bold green] {task['description']}")
     for task in updated_tasks:
         console.print(f"[bold yellow]Updated task:[/bold yellow] {task['description']}")
-    
-    for topic in new_topics:
-        console.print(f"[bold green]Added a new knowledge entry:[/bold green] {topic['topic']}")
-    for topic in updated_topics:
-        console.print(f"[bold yellow]Updated knowledge entry:[/bold yellow] {topic['topic']}")
 
-# Construct prompt for the LLM
-def construct_prompt(conversation_history=None):
-    # Load current context from JSON files
-    context = {
+    for topic in new_topics:
+        console.print(f"[bold green]Added a new topics entry:[/bold green] {topic['topic']}")
+    for topic in updated_topics:
+        console.print(f"[bold yellow]Updated topics entry:[/bold yellow] {topic['topic']}")
+
+# Construct datastore for the LLM
+def construct_datastore():
+    return {
         'people': load_json_file('people.json'),
         'tasks': load_json_file('tasks.json'),
-        'knowledge': load_json_file('knowledge.json')
+        'topics': load_json_file('topics.json')
     }
-    
+
+# Get a summary of tasks, people, and topics entries
+def get_task_summary():
+    datastore = construct_datastore()
     current_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
-    # Construct messages for the LLM
-    messages = [
-        {"role": "system", "content": config['system_prompt']},
-        {"role": "user", "content": f"Current context (datastore): {json.dumps(context)}"},
-        {"role": "user", "content": f"Current date and time: {current_datetime}"}
+    conversation_history = [
+        {"role": "user", "content": f"Current date and time: {current_datetime}"},
+        {"role": "user", "content": "Provide an overview of all tasks, people, and topics entries."}
     ]
-    
-    if conversation_history:
-        messages.extend(conversation_history)
-    
-    return messages
 
-# Get a summary of tasks, people, and knowledge entries
-def get_task_summary():
-    messages = construct_prompt()
-    messages.append({"role": "user", "content": "Provide an overview of all tasks, people, and knowledge entries."})
-    
-    response = call_openai_api(messages)
+    response = call_openai_api(config['system_prompt'], datastore, conversation_history)
+
     return response['instructions']['followup'] if response else "Unable to summarize tasks at the moment."
 
 # Main function to run the Sidekick assistant
@@ -149,7 +146,7 @@ def main():
     # Fetch and display initial task summary
     console.print("Fetching task summary...")
     task_summary = get_task_summary()
-    
+
     markdown_summary = Markdown(task_summary)
     console.print(Panel(markdown_summary, title="Task Summary", border_style="blue"))
 
@@ -157,17 +154,19 @@ def main():
     while True:
         thread_indicator = f"[{thread_count}] " if thread_count > 0 else ""
         user_input = session.prompt(f"{thread_indicator}You: ")
-        
+
         if user_input.lower() == 'exit':
             break
 
         conversation_history.append({"role": "user", "content": user_input})
         thread_count += 1
 
-        messages = construct_prompt(conversation_history)
+        datastore = construct_datastore()
+        current_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        conversation_history.append({"role": "system", "content": f"Current date and time: {current_datetime}"})
 
         # Get response from LLM
-        llm_response = call_openai_api(messages)
+        llm_response = call_openai_api(config['system_prompt'], datastore, conversation_history)
         print(llm_response)
         if llm_response is None:
             console.print("[bold red]An error occurred. Please try again.[/bold red]")
@@ -188,7 +187,7 @@ def main():
             conversation_history = []
             thread_count = 0
             console.print("[bold green]Thread completed. Starting new conversation.[/bold green]")
-            
+
             if 'new_prompt' in instructions:
                 console.print(Panel(escape(instructions['new_prompt']), title="New Suggestion", border_style="green"))
 
