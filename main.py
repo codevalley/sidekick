@@ -2,12 +2,15 @@ import json
 import os
 import yaml
 import openai
+from openai import OpenAI
 from datetime import datetime
 from prompt_toolkit import PromptSession
 from prompt_toolkit.styles import Style
 from rich.console import Console
 from rich.panel import Panel
 from rich.markdown import Markdown
+from pydantic import BaseModel, Field
+from typing import List, Literal
 
 
 # Load configuration from YAML file
@@ -34,6 +37,70 @@ def save_json_file(filename, data):
         json.dump(data, f, indent=2)
 
 
+# Pydantic models for structured outputs
+class PersonContact(BaseModel):
+    email: str
+    phone: str
+
+
+class Person(BaseModel):
+    person_id: str
+    name: str
+    designation: str
+    relationship: str
+    importance: Literal["high", "medium", "low"]
+    notes: str
+    contact: PersonContact
+
+
+class TaskPeople(BaseModel):
+    owner: str
+    final_beneficiary: str
+    stakeholders: List[str]
+
+
+class Task(BaseModel):
+    task_id: str
+    type: Literal["1", "2", "3", "4"]
+    description: str
+    status: Literal["active", "pending", "completed"]
+    actions: List[str]
+    people: TaskPeople
+    dependencies: List[str]
+    schedule: str
+    priority: Literal["high", "medium", "low"]
+
+
+class Topic(BaseModel):
+    topic_id: str
+    name: str
+    description: str
+    keywords: List[str]
+    related_people: List[str]
+    related_tasks: List[str]
+
+
+class Instructions(BaseModel):
+    status: Literal["incomplete", "complete"]
+    followup: str
+    new_prompt: str
+
+
+class Data(BaseModel):
+    tasks: List[Task] = Field(default_factory=list)
+    people: List[Person] = Field(default_factory=list)
+    topics: List[Topic] = Field(default_factory=list)
+
+
+class LLMResponse(BaseModel):
+    instructions: Instructions
+    data: Data
+
+
+config = load_config()
+client = OpenAI(api_key=config["openai_api_key"])
+
+
 # Call OpenAI API with given messages
 def call_openai_api(system_prompt, datastore, conversation_history):
     try:
@@ -47,16 +114,15 @@ def call_openai_api(system_prompt, datastore, conversation_history):
             ]
             messages.extend(conversation_history)
 
-            response = openai.ChatCompletion.create(
-                model="gpt-4-0314", messages=messages
+            completion = client.beta.chat.completions.parse(
+                model="gpt-4o-mini-2024-07-18",
+                messages=messages,
+                response_format=LLMResponse,
             )
 
-        return json.loads(response.choices[0].message.content)
-    except json.JSONDecodeError:
-        console.print(
-            "[bold red]Error:[/bold red]"
-            "Unable to parse OpenAI response as JSON."
-        )
+        return completion.choices[0].message.parsed
+    except Exception as e:
+        console.print(f"[bold red]Error:[/bold red] {str(e)}")
         return None
 
 
@@ -82,13 +148,13 @@ def process_data(data):
 
     # Update people, tasks, and topics
     people, new_people, updated_people = update_or_add(
-        people, data.get("people", []), "person_id"
+        people, [person.dict() for person in data.people], "person_id"
     )
     tasks, new_tasks, updated_tasks = update_or_add(
-        tasks, data.get("tasks", []), "task_id"
+        tasks, [task.dict() for task in data.tasks], "task_id"
     )
     topics, new_topics, updated_topics = update_or_add(
-        topics, data.get("topics", []), "topic_id"
+        topics, [topic.dict() for topic in data.topics], "topic_id"
     )
 
     # Save updated data to JSON files
@@ -104,14 +170,14 @@ def process_data(data):
 
 def print_updates(entity_type, new_entries, updated_entries):
     for entry in new_entries:
+        name = entry.get('name', entry.get('description', 'Unknown'))
         console.print(
-            f"[bold green]Added a new {entity_type}:[/bold green] "
-            f"{entry['name']}"
+            f"[bold green]Added a new {entity_type}:[/bold green] {name}"
         )
     for entry in updated_entries:
+        name = entry.get('name', entry.get('description', 'Unknown'))
         console.print(
-            f"[bold yellow]Updated {entity_type}:[/bold yellow] "
-            f"{entry['name']}"
+            f"[bold yellow]Updated {entity_type}:[/bold yellow] {name}"
         )
 
 
@@ -147,7 +213,7 @@ def get_task_summary():
     )
 
     return (
-        response["instructions"]["followup"]
+        response.instructions.followup
         if response
         else "Unable to summarize tasks at the moment."
     )
@@ -215,21 +281,21 @@ def main():
             )
             continue
 
-        instructions = llm_response["instructions"]
-        data = llm_response["data"]
+        instructions = llm_response.instructions
+        data = llm_response.data
 
         # Display LLM response
-        markdown_followup = Markdown(instructions["followup"])
+        markdown_followup = Markdown(instructions.followup)
         console.print(
             Panel(markdown_followup, title="Sidekick", border_style="blue")
         )
 
         conversation_history.append(
-            {"role": "assistant", "content": json.dumps(llm_response)}
+            {"role": "assistant", "content": llm_response.json()}
         )
 
         # Process data if the conversation is complete
-        if instructions["status"] == "complete":
+        if instructions.status == "complete":
             process_data(data)
             conversation_history = []
             thread_count = 0
@@ -238,10 +304,10 @@ def main():
                 "Starting new conversation.[/bold green]"
             )
 
-            if "new_prompt" in instructions:
+            if instructions.new_prompt:
                 console.print(
                     Panel(
-                        instructions["new_prompt"],
+                        instructions.new_prompt,
                         title="New Suggestion",
                         border_style="green",
                     )

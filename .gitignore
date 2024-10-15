@@ -4,3 +4,4 @@ tasks.json
 people.json
 topics.json
 config.yaml
+__pycache__/
