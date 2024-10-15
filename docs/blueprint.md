@@ -29,14 +29,15 @@ This blueprint outlines the development of an AI-powered agent—an intelligent 
 
 #### **Processing and Classification**
 
+- **Two-Stage Processing**: The agent operates in two stages: Context Gathering and Entity Extraction.
 - **Task Classification**: Tasks are categorized into predefined types based on their characteristics.
 - **People Identification**: Names mentioned are linked to profiles in the People Directory, capturing relationships and preferences.
 - **Contextual Linking**: Tasks are associated with relevant knowledge base entries and people profiles.
 
 #### **Storage**
 
-- **Structured Documents**: Information is stored in organized Markdown or YAML files, each dedicated to tasks, people, or knowledge entries.
-- **Version Control**: Changes are tracked to maintain history and enable easy updates.
+- **Structured JSON Documents**: Information is stored in organized JSON files, each dedicated to tasks, people, or knowledge entries.
+- **Local File System**: All data is stored locally in the same folder as the agent.
 
 ### **2. Task Types Overview**
 
@@ -82,7 +83,7 @@ This blueprint outlines the development of an AI-powered agent—an intelligent 
 - **Content**:
   - **Personal Information**: Full name, designation, contact details.
   - **Relationship**: Nature of the relationship (e.g., manager, client, team member).
-  - **Preferences**: Communication style, availability, important dates.
+  - **Importance**: High, medium, or low priority.
   - **Associated Tasks**: Tasks linked to the individual.
 - **Usage**:
   - Enhances task prioritization based on the importance of the individual.
@@ -94,162 +95,47 @@ This blueprint outlines the development of an AI-powered agent—an intelligent 
 
 ### **1. Task Documents**
 
-Structured using YAML for readability and ease of parsing.
+Structured using JSON for efficient parsing and storage.
 
 #### **General Structure**
 
-```yaml
-- task_id: <Unique Identifier>
-  date: <YYYY-MM-DD>
-  status: <active | pending | completed>
-  type: <Type 1 | Type 2 | Type 3 | Type 4>
-  description: "<Task Description>"
-  actions:
-    - "<Action Items>"
-  dependencies:
-    - "<Dependencies, if any>"
-  people:
-    owner: "<Executive or Delegate>"
-    final_beneficiary: "<Name(s) of Beneficiary>"
-    stakeholders:
-      - "<Name(s) of Stakeholders>"
-```
-
-#### **Example: Type 1 Task**
-
-```yaml
-- task_id: T1-20231008-001
-  date: 2023-10-08
-  status: active
-  type: Type 1
-  description: "Send the updated project plan to **Maria**."
-  actions:
-    - "Compose email with attachment."
-  dependencies: []
-  people:
-    owner: "Executive"
-    final_beneficiary: "Maria Garcia"
-    stakeholders: []
-```
-
-#### **Example: Type 2 Task**
-
-```yaml
-- task_id: T2-20231008-002
-  date: 2023-10-08
-  status: planning
-  type: Type 2
-  description: "Lead the merger discussions with **David** and the legal team."
-  actions:
-    - "Schedule initial strategy meeting."
-    - "Outline key negotiation points."
-  dependencies: []
-  people:
-    owner: "Executive"
-    final_beneficiary: "David Chen"
-    stakeholders:
-      - "Legal Team"
-      - "Finance Department"
-```
-
-#### **Example: Type 3 Task**
-
-```yaml
-- task_id: T3-20231008-003
-  date: 2023-10-08
-  status: scheduled
-  type: Type 3
-  description: "Participate in the annual performance review with **Anna**."
-  actions:
-    - "Prepare performance metrics."
-  schedule: "2023-10-15 14:00"
-  location: "Conference Room B"
-  dependencies: []
-  people:
-    owner: "Executive"
-    final_beneficiary: "Anna Patel"
-    stakeholders: []
-```
-
-#### **Example: Type 4 Task**
-
-```yaml
-- task_id: T4-20231008-004
-  date: 2023-10-08
-  status: pending_dependency
-  type: Type 4
-  description: "Finalize the budget proposal after **Laura** provides the financial projections."
-  actions:
-    - "Review projections."
-    - "Adjust budget accordingly."
-  dependencies:
-    - "Receive financial projections from Laura."
-  people:
-    owner: "Executive"
-    final_beneficiary: "Board of Directors"
-    stakeholders:
-      - "Laura Kim"
-      - "Finance Committee"
+```json
+{
+  "task_id": "<Unique Identifier>",
+  "type": "<1|2|3|4>",
+  "description": "<Task Description>",
+  "status": "<active|pending|completed>",
+  "actions": ["<Action Items>"],
+  "people": {
+    "owner": "<Executive or Delegate>",
+    "final_beneficiary": "<Name(s) of Beneficiary>",
+    "stakeholders": ["<Name(s) of Stakeholders>"]
+  },
+  "dependencies": ["<Dependencies, if any>"],
+  "schedule": "<YYYY-MM-DD HH:MM>",
+  "priority": "<high|medium|low>"
+}
 ```
 
 ### **2. People Directory**
 
-A YAML document capturing detailed profiles.
+A JSON document capturing detailed profiles.
 
 #### **Structure**
 
-```yaml
-- person_id: <Unique Identifier>
-  name: "<Full Name>"
-  designation: "<Job Title>"
-  relationship: "<Nature of Relationship>"
-  importance: "<High | Medium | Low>"
-  preferences:
-    communication_style: "<Email | Phone | In-Person>"
-    availability: "<Working Hours | Specific Times>"
-    notes: "<Additional Notes>"
-  associated_tasks:
-    - "<Task IDs>"
-```
-
-#### **Example Entries**
-
-```yaml
-- person_id: P-001
-  name: "John Smith"
-  designation: "Chief Executive Officer"
-  relationship: "Manager"
-  importance: "High"
-  preferences:
-    communication_style: "In-Person"
-    availability: "Weekdays 9 AM - 6 PM"
-    notes: "Prefers concise reports."
-  associated_tasks:
-    - "T4-20231008-004"
-
-- person_id: P-002
-  name: "Emily Davis"
-  designation: "Client Relations Manager"
-  relationship: "Direct Report"
-  importance: "Medium"
-  preferences:
-    communication_style: "Email"
-    availability: "Weekdays 10 AM - 4 PM"
-    notes: "Appreciates detailed explanations."
-  associated_tasks:
-    - "T1-20231008-001"
-
-- person_id: P-003
-  name: "Carlos Mendoza"
-  designation: "Marketing Director"
-  relationship: "Peer"
-  importance: "Medium"
-  preferences:
-    communication_style: "Phone"
-    availability: "Flexible"
-    notes: "Interested in innovative ideas."
-  associated_tasks:
-    - "T2-20231008-002"
+```json
+{
+  "person_id": "<Unique Identifier>",
+  "name": "<Full Name>",
+  "designation": "<Job Title>",
+  "relationship": "<Nature of Relationship>",
+  "importance": "<high|medium|low>",
+  "notes": "<Additional Notes>",
+  "contact": {
+    "email": "<Email Address>",
+    "phone": "<Phone Number>"
+  }
+}
 ```
 
 ### **3. Knowledge Base Entries**
@@ -258,35 +144,15 @@ Structured to provide quick access to relevant information.
 
 #### **Structure**
 
-```yaml
-- entry_id: KB-<Unique Identifier>
-  date: <YYYY-MM-DD>
-  topic: "<Topic Title>"
-  content: "<Detailed Content>"
-  relevance: ["<Associated Tasks>"]
-  people:
-    contributors:
-      - "<Names>"
-    interested_parties:
-      - "<Names>"
-```
-
-#### **Example Entry**
-
-```yaml
-- entry_id: KB-20231008-001
-  date: 2023-10-08
-  topic: "Emerging Markets Expansion Strategy"
-  content: "Analysis of potential growth opportunities in Southeast Asia..."
-  relevance:
-    - "T2-20231008-002"
-  people:
-    contributors:
-      - "Carlos Mendoza"
-      - "External Consultant: Lisa Wong"
-    interested_parties:
-      - "John Smith"
-      - "Board of Directors"
+```json
+{
+  "topic_id": "<Unique Identifier>",
+  "name": "<Topic Name>",
+  "description": "<Detailed Description>",
+  "keywords": ["<Keyword1>", "<Keyword2>", ...],
+  "related_people": ["<Person Name1>", "<Person Name2>", ...],
+  "related_tasks": ["<Task ID1>", "<Task ID2>", ...]
+}
 ```
 
 ---
@@ -296,7 +162,7 @@ Structured to provide quick access to relevant information.
 ### **1. Contextual Understanding**
 
 - **Natural Language Processing**: Advanced NLP to comprehend the executive's instructions, capturing tasks and mentions of people by name.
-- **Continuous Learning**: Updates its understanding based on new interactions and information.
+- **Two-Stage Processing**: Context Gathering followed by Entity Extraction for comprehensive understanding.
 
 ### **2. Intelligent Task Management**
 
@@ -307,14 +173,12 @@ Structured to provide quick access to relevant information.
 ### **3. Relationship Management**
 
 - **People Recognition**: Identifies individuals by name and links them to profiles in the People Directory.
-- **Preference Consideration**: Tailors communication and task suggestions based on individual preferences.
 - **Importance Weighting**: Prioritizes tasks involving high-importance individuals.
 
 ### **4. Proactive Assistance**
 
 - **Recommendations**: Suggests what the executive should focus on next, factoring in task priority and relationships.
 - **Reminders**: Alerts for upcoming deadlines, meetings, and dependency resolutions.
-- **Quick Actions**: Provides options to execute Type 1 tasks immediately.
 
 ### **5. Knowledge Integration**
 
@@ -327,28 +191,26 @@ Structured to provide quick access to relevant information.
 
 ### **Phase 1: Foundation Building**
 
-- **Develop Conversational Interface**: Create a chat-based platform for interaction.
-- **Implement NLP Engine**: Utilize state-of-the-art models for accurate language understanding.
-- **Set Up Data Structures**: Establish the format for task documents, people directory, and knowledge base.
-- **Basic Task Management**: Enable creation and classification of tasks, with emphasis on Type 1 and Type 3.
+- **Develop CLI Interface**: Create a command-line interface for interaction using prompt_toolkit.
+- **Implement LLM Integration**: Utilize OpenAI's GPT models for natural language understanding.
+- **Set Up Data Structures**: Establish JSON formats for tasks, people directory, and knowledge base.
+- **Basic Task Management**: Enable creation and classification of tasks.
 
-### **Phase 2: Relationship Integration**
+### **Phase 2: Two-Stage Processing**
 
-- **People Directory Development**: Build the database for storing detailed profiles.
-- **Enhanced NLP**: Improve recognition of names and context regarding people.
-- **Task-People Linking**: Associate tasks with individuals, capturing roles and preferences.
+- **Context Gathering**: Implement the first stage of processing for understanding user input.
+- **Entity Extraction**: Develop the second stage for extracting structured data from conversations.
 
 ### **Phase 3: Advanced Functionality**
 
 - **Priority Algorithm**: Develop algorithms that prioritize tasks based on type, urgency, dependencies, and people importance.
 - **Dependency Management**: Implement tracking and notifications for task dependencies.
-- **Knowledge Base Expansion**: Integrate contextually relevant information retrieval.
+- **Knowledge Base Integration**: Integrate contextually relevant information retrieval.
 
 ### **Phase 4: Optimization and Learning**
 
-- **Machine Learning Integration**: Use ML to refine recommendations and adapt to the executive's patterns.
 - **User Feedback Loop**: Incorporate feedback mechanisms to continually improve performance.
-- **Security Enhancements**: Ensure data privacy and compliance with relevant regulations.
+- **Security Enhancements**: Ensure data privacy and implement local storage security measures.
 
 ### **Phase 5: Testing and Deployment**
 
@@ -362,19 +224,15 @@ Structured to provide quick access to relevant information.
 
 - **Data Privacy**:
   - **Challenge**: Protecting sensitive information about individuals and tasks.
-  - **Mitigation**: Implement robust encryption, access controls, and compliance with data protection laws.
+  - **Mitigation**: Implement local storage and ensure secure handling of API keys.
 
 - **NLP Accuracy**:
   - **Challenge**: Ensuring the agent accurately understands natural language input.
-  - **Mitigation**: Continuous training of NLP models with relevant datasets; implementing fallback options for unclear inputs.
+  - **Mitigation**: Utilize advanced LLM models and implement the two-stage processing approach.
 
 - **User Adoption**:
   - **Challenge**: Encouraging the executive to integrate the agent into daily routines.
-  - **Mitigation**: Design an intuitive interface; demonstrate clear value in time savings and efficiency.
-
-- **Complex Relationships**:
-  - **Challenge**: Managing intricate relationships and preferences among individuals.
-  - **Mitigation**: Allow customization of people profiles; provide options to override default prioritizations.
+  - **Mitigation**: Design an intuitive CLI interface; demonstrate clear value in time savings and efficiency.
 
 ---
 
@@ -384,7 +242,7 @@ Structured to provide quick access to relevant information.
 - **Voice Interaction**: Enable hands-free communication through voice commands.
 - **Team Collaboration**: Extend functionalities to coordinate with team members securely.
 - **Advanced Analytics**: Provide insights into productivity trends and relationship dynamics.
-- **Emotional Intelligence**: Incorporate sentiment analysis to adjust interactions based on the executive's mood and stress levels.
+- **Graphical User Interface**: Develop a GUI for improved user experience and accessibility.
 
 ---
 

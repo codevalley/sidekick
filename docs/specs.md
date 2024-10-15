@@ -11,13 +11,13 @@ Sidekick is an intelligent personal assistant for executives, functioning as a s
 - **JSON-based Communication**: Implement a standardized JSON structure for all interactions between the user, Sidekick, and the LLM.
 - **Local Document Management**: Store and manage data in structured JSON files within the same folder as the agent.
 - **Task, People, and Context Management**: Efficiently handle tasks, contacts, and contextual information.
-- **Workflow Automation**: Define specific workflows for major actions, utilizing the LLM for intelligent processing.
+- **Two-Stage Processing**: Implement a Context Gathering stage followed by an Entity Extraction stage for comprehensive understanding.
 
 ## **System Architecture**
 
 ### **1. Core Components**
 
-- **Command-Line Interface (CLI)**: The primary interface for user interaction.
+- **Command-Line Interface (CLI)**: The primary interface for user interaction, implemented using prompt_toolkit.
 - **LLM Integration**: Utilizes OpenAI's GPT-4 or GPT-3.5-turbo for natural language processing.
 - **Local Storage**: JSON files for storing tasks, people, and context information.
 - **Configuration Management**: YAML file for storing API keys and system prompts.
@@ -67,11 +67,11 @@ Sidekick is an intelligent personal assistant for executives, functioning as a s
 }
 ```
 
-#### Knowledge
+#### Topic
 ```json
 {
-  "knowledge_id": "<unique_identifier>",
-  "topic": "<topic_name>",
+  "topic_id": "<unique_identifier>",
+  "name": "<topic_name>",
   "description": "<detailed_description>",
   "keywords": ["<keyword1>", "<keyword2>", ...],
   "related_people": ["<person_name1>", "<person_name2>", ...],
@@ -82,19 +82,19 @@ Sidekick is an intelligent personal assistant for executives, functioning as a s
 ## **Interaction Flow**
 
 1. **User Input**: The user enters a natural language query or command.
-2. **Context Gathering**: Sidekick loads the current context from local JSON files.
-3. **LLM Processing**: The input and context are sent to the LLM for processing.
-4. **Response Generation**: The LLM generates a structured JSON response.
-5. **Data Update**: If necessary, Sidekick updates the local JSON files with new or modified information.
-6. **User Feedback**: Sidekick presents the processed information or actions to the user.
+2. **Context Gathering**: Sidekick loads the current context from local JSON files and enters the first stage of processing.
+3. **LLM Processing (Stage 1)**: The input and context are sent to the LLM for initial processing and understanding.
+4. **Entity Extraction (Stage 2)**: The LLM performs a second pass to extract structured information and generate a response.
+5. **Response Generation**: The LLM generates a structured JSON response.
+6. **Data Update**: If necessary, Sidekick updates the local JSON files with new or modified information.
+7. **User Feedback**: Sidekick presents the processed information or actions to the user.
 
 ## **Key Functionalities**
 
 ### **1. Natural Language Processing**
 
-- Sidekick uses the LLM to interpret the user's natural language inputs.
-- The system classifies inputs into categories: Task, Person, Knowledge, Advice, or Browse.
-- Relevant information is extracted to populate the structured data models.
+- Sidekick uses the LLM to interpret the user's natural language inputs in two stages.
+- The system classifies inputs and extracts relevant information to populate the structured data models.
 
 ### **2. Task Management**
 
@@ -130,12 +130,13 @@ Sidekick is an intelligent personal assistant for executives, functioning as a s
 ### **2. LLM Integration**
 
 - Utilize OpenAI's API to interact with GPT-4 or GPT-3.5-turbo.
+- Implement two-stage processing: Context Gathering and Entity Extraction.
 - Construct prompts that include the current context and user input.
 - Parse LLM responses and extract structured data.
 
 ### **3. Data Persistence**
 
-- Use JSON files (`tasks.json`, `people.json`, `knowledge.json`) for local storage.
+- Use JSON files (`tasks.json`, `people.json`, `topics.json`) for local storage.
 - Implement functions to load, update, and save data to these files.
 - Ensure data integrity and handle concurrent access if needed.
 
@@ -156,7 +157,7 @@ Sidekick is an intelligent personal assistant for executives, functioning as a s
 ### **1. Adding a New Task**
 
 1. User provides task details in natural language.
-2. Sidekick processes the input through the LLM.
+2. Sidekick processes the input through the LLM in two stages.
 3. LLM extracts task information and suggests a structured task object.
 4. Sidekick presents the extracted information to the user for confirmation.
 5. Upon confirmation, Sidekick adds the task to `tasks.json`.
@@ -164,9 +165,9 @@ Sidekick is an intelligent personal assistant for executives, functioning as a s
 
 ### **2. Updating Existing Information**
 
-1. User requests an update to a task, person, or knowledge entry.
+1. User requests an update to a task, person, or topic entry.
 2. Sidekick identifies the relevant entry using provided IDs or contextual information.
-3. LLM processes the update request and suggests modifications.
+3. LLM processes the update request in two stages and suggests modifications.
 4. Sidekick presents the proposed changes to the user for confirmation.
 5. Upon confirmation, Sidekick updates the relevant JSON file.
 6. Sidekick provides confirmation of the update.
@@ -175,7 +176,7 @@ Sidekick is an intelligent personal assistant for executives, functioning as a s
 
 1. User requests a summary or report (e.g., task list, contact information).
 2. Sidekick retrieves relevant information from JSON files.
-3. LLM processes the data and generates a structured summary.
+3. LLM processes the data in two stages and generates a structured summary.
 4. Sidekick presents the summary to the user in a formatted manner.
 
 ## **Future Enhancements**
@@ -188,4 +189,4 @@ Sidekick is an intelligent personal assistant for executives, functioning as a s
 
 ## **Conclusion**
 
-This updated specification for Sidekick outlines a powerful, AI-driven executive assistant that leverages natural language processing and structured data management. By focusing on a JSON-based interaction model and local file storage, Sidekick provides a flexible and efficient solution for managing tasks, contacts, and contextual information. The system's ability to understand and process natural language inputs, combined with its structured data handling, positions it as a valuable tool for enhancing executive productivity and decision-making.
+This updated specification for Sidekick outlines a powerful, AI-driven executive assistant that leverages natural language processing and structured data management. By focusing on a JSON-based interaction model, local file storage, and a two-stage processing approach, Sidekick provides a flexible and efficient solution for managing tasks, contacts, and contextual information. The system's ability to understand and process natural language inputs, combined with its structured data handling, positions it as a valuable tool for enhancing executive productivity and decision-making.

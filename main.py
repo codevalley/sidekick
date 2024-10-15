@@ -7,20 +7,14 @@ from prompt_toolkit import PromptSession
 from prompt_toolkit.styles import Style
 from rich.console import Console
 from rich.panel import Panel
-from rich.markup import escape
 from rich.markdown import Markdown
-from rich.text import Text
 
 
 # Load configuration from YAML file
 def load_config():
-    with open("config.yaml", "r") as f:
+    with open("config.yaml", "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
 
-
-# Load configuration and set OpenAI API key
-config = load_config()
-openai.api_key = config["openai_api_key"]
 
 # Initialize Rich console for enhanced output
 console = Console()
@@ -29,14 +23,14 @@ console = Console()
 # Load JSON data from a file
 def load_json_file(filename):
     if os.path.exists(filename):
-        with open(filename, "r") as f:
+        with open(filename, "r", encoding="utf-8") as f:
             return json.load(f)
     return []
 
 
 # Save JSON data to a file
 def save_json_file(filename, data):
-    with open(filename, "w") as f:
+    with open(filename, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
 
 
@@ -46,18 +40,22 @@ def call_openai_api(system_prompt, datastore, conversation_history):
         with console.status("[bold green]Thinking...", spinner="dots"):
             messages = [
                 {"role": "system", "content": system_prompt},
-                {"role": "system", "content": f"Datastore: {json.dumps(datastore)}"},
+                {
+                    "role": "system",
+                    "content": f"Datastore: {json.dumps(datastore)}",
+                },
             ]
             messages.extend(conversation_history)
 
             response = openai.ChatCompletion.create(
-                model="gpt-4o-mini-2024-07-18", messages=messages
+                model="gpt-4-0314", messages=messages
             )
 
         return json.loads(response.choices[0].message.content)
     except json.JSONDecodeError:
         console.print(
-            "[bold red]Error:[/bold red] Unable to parse OpenAI response as JSON."
+            "[bold red]Error:[/bold red]"
+            "Unable to parse OpenAI response as JSON."
         )
         return None
 
@@ -90,7 +88,7 @@ def process_data(data):
         tasks, data.get("tasks", []), "task_id"
     )
     topics, new_topics, updated_topics = update_or_add(
-        topics, data.get("topics", []), "topics_id"
+        topics, data.get("topics", []), "topic_id"
     )
 
     # Save updated data to JSON files
@@ -99,27 +97,21 @@ def process_data(data):
     save_json_file("topics.json", topics)
 
     # Print updates to console
-    for person in new_people:
-        console.print(
-            f"[bold green]Added a new contact:[/bold green] {person['name']} | {person['importance']} priority"
-        )
-    for person in updated_people:
-        console.print(f"[bold yellow]Updated contact:[/bold yellow] {person['name']}")
+    print_updates("contact", new_people, updated_people)
+    print_updates("task", new_tasks, updated_tasks)
+    print_updates("topic", new_topics, updated_topics)
 
-    for task in new_tasks:
-        console.print(
-            f"[bold green]Added a new task:[/bold green] {task['description']}"
-        )
-    for task in updated_tasks:
-        console.print(f"[bold yellow]Updated task:[/bold yellow] {task['description']}")
 
-    for topic in new_topics:
+def print_updates(entity_type, new_entries, updated_entries):
+    for entry in new_entries:
         console.print(
-            f"[bold green]Added a new topics entry:[/bold green] {topic['topic']}"
+            f"[bold green]Added a new {entity_type}:[/bold green] "
+            f"{entry['name']}"
         )
-    for topic in updated_topics:
+    for entry in updated_entries:
         console.print(
-            f"[bold yellow]Updated topics entry:[/bold yellow] {topic['topic']}"
+            f"[bold yellow]Updated {entity_type}:[/bold yellow] "
+            f"{entry['name']}"
         )
 
 
@@ -138,14 +130,21 @@ def get_task_summary():
     current_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     conversation_history = [
-        {"role": "user", "content": f"Current date and time: {current_datetime}"},
         {
             "role": "user",
-            "content": "Provide an overview of all tasks, people, and topics entries.",
+            "content": f"Current date and time: {current_datetime}",
+        },
+        {
+            "role": "user",
+            "content": (
+                "Provide an overview of all tasks, people, and topics entries."
+            ),
         },
     ]
 
-    response = call_openai_api(config["system_prompt"], datastore, conversation_history)
+    response = call_openai_api(
+        config["system_prompt"], datastore, conversation_history
+    )
 
     return (
         response["instructions"]["followup"]
@@ -171,8 +170,7 @@ def main():
     # Display welcome message
     console.print(
         Panel.fit(
-            Text("Welcome to Sidekick!", style="bold magenta")
-            + Text("\nYour personal executive assistant", style="italic"),
+            "Welcome to Sidekick!\nYour personal executive assistant",
             title="Sidekick",
             subtitle="Type 'exit' to quit",
         )
@@ -183,7 +181,9 @@ def main():
     task_summary = get_task_summary()
 
     markdown_summary = Markdown(task_summary)
-    console.print(Panel(markdown_summary, title="Task Summary", border_style="blue"))
+    console.print(
+        Panel(markdown_summary, title="Task Summary", border_style="blue")
+    )
 
     # Main interaction loop
     while True:
@@ -199,16 +199,20 @@ def main():
         datastore = construct_datastore()
         current_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         conversation_history.append(
-            {"role": "system", "content": f"Current date and time: {current_datetime}"}
+            {
+                "role": "system",
+                "content": f"Current date and time: {current_datetime}",
+            }
         )
 
         # Get response from LLM
         llm_response = call_openai_api(
             config["system_prompt"], datastore, conversation_history
         )
-        print(llm_response)
         if llm_response is None:
-            console.print("[bold red]An error occurred. Please try again.[/bold red]")
+            console.print(
+                "[bold red]An error occurred. Please try again.[/bold red]"
+            )
             continue
 
         instructions = llm_response["instructions"]
@@ -216,7 +220,9 @@ def main():
 
         # Display LLM response
         markdown_followup = Markdown(instructions["followup"])
-        console.print(Panel(markdown_followup, title="Sidekick", border_style="blue"))
+        console.print(
+            Panel(markdown_followup, title="Sidekick", border_style="blue")
+        )
 
         conversation_history.append(
             {"role": "assistant", "content": json.dumps(llm_response)}
@@ -228,13 +234,14 @@ def main():
             conversation_history = []
             thread_count = 0
             console.print(
-                "[bold green]Thread completed. Starting new conversation.[/bold green]"
+                "[bold green]Thread completed. "
+                "Starting new conversation.[/bold green]"
             )
 
             if "new_prompt" in instructions:
                 console.print(
                     Panel(
-                        escape(instructions["new_prompt"]),
+                        instructions["new_prompt"],
                         title="New Suggestion",
                         border_style="green",
                     )
@@ -242,4 +249,7 @@ def main():
 
 
 if __name__ == "__main__":
+    # Load configuration and set OpenAI API key
+    config = load_config()
+    openai.api_key = config["openai_api_key"]
     main()
