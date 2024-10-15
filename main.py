@@ -11,6 +11,7 @@ from rich.panel import Panel
 from rich.markdown import Markdown
 from pydantic import BaseModel, Field
 from typing import List, Literal
+import argparse
 
 
 # Load configuration from YAML file
@@ -102,7 +103,8 @@ client = OpenAI(api_key=config["openai_api_key"])
 
 
 # Call OpenAI API with given messages
-def call_openai_api(system_prompt, datastore, conversation_history):
+def call_openai_api(system_prompt, datastore, conversation_history,
+                    verbose=False):
     try:
         with console.status("[bold green]Thinking...", spinner="dots"):
             messages = [
@@ -115,12 +117,14 @@ def call_openai_api(system_prompt, datastore, conversation_history):
             messages.extend(conversation_history)
 
             completion = client.beta.chat.completions.parse(
-                model="gpt-4o-mini-2024-07-18",
+                model="gpt-4o-mini",
                 messages=messages,
                 response_format=LLMResponse,
             )
+            if verbose:
+                print_token_usage(completion.usage)
 
-        return completion.choices[0].message.parsed
+            return completion.choices[0].message.parsed
     except Exception as e:
         console.print(f"[bold red]Error:[/bold red] {str(e)}")
         return None
@@ -168,6 +172,16 @@ def process_data(data):
     print_updates("topic", new_topics, updated_topics)
 
 
+# method prints tokens used in the conversation
+def print_token_usage(usage):
+    console.print("[bold cyan]Token Usage:[/bold cyan]")
+    console.print(f"  Prompt tokens: {usage.prompt_tokens}")
+    console.print(f"  Completion tokens: {usage.completion_tokens}")
+    console.print(
+        f"  Cached tokens: {usage.prompt_tokens_details.cached_tokens}")
+    console.print(f"  Total tokens: {usage.total_tokens}")
+
+
 def print_updates(entity_type, new_entries, updated_entries):
     for entry in new_entries:
         name = entry.get('name', entry.get('description', 'Unknown'))
@@ -191,7 +205,7 @@ def construct_datastore():
 
 
 # Get a summary of tasks, people, and topics entries
-def get_task_summary():
+def get_task_summary(verbose=False):
     datastore = construct_datastore()
     current_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -209,7 +223,7 @@ def get_task_summary():
     ]
 
     response = call_openai_api(
-        config["system_prompt"], datastore, conversation_history
+        config["system_prompt"], datastore, conversation_history, verbose
     )
 
     return (
@@ -220,7 +234,7 @@ def get_task_summary():
 
 
 # Main function to run the Sidekick assistant
-def main():
+def main(verbose=False):
     conversation_history = []
     thread_count = 0
 
@@ -244,7 +258,7 @@ def main():
 
     # Fetch and display initial task summary
     console.print("Fetching task summary...")
-    task_summary = get_task_summary()
+    task_summary = get_task_summary(verbose)
 
     markdown_summary = Markdown(task_summary)
     console.print(
@@ -273,7 +287,7 @@ def main():
 
         # Get response from LLM
         llm_response = call_openai_api(
-            config["system_prompt"], datastore, conversation_history
+            config["system_prompt"], datastore, conversation_history, verbose
         )
         if llm_response is None:
             console.print(
@@ -318,4 +332,13 @@ if __name__ == "__main__":
     # Load configuration and set OpenAI API key
     config = load_config()
     openai.api_key = config["openai_api_key"]
-    main()
+
+    # Add argument parsing for verbose flag
+    parser = argparse.ArgumentParser(
+        description="Sidekick: Your personal executive assistant"
+    )
+    parser.add_argument(
+        "-v", "--verbose", action="store_true", help="Enable verbose output"
+    )
+    args = parser.parse_args()
+    main(verbose=args.verbose)
