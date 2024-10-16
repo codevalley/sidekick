@@ -26,6 +26,10 @@ console = Console()
 
 # Load JSON data from a file
 def load_json_file(filename):
+    """
+    Load JSON data from a file. If the file doesn't exist,
+    return an empty list.
+    """
     if os.path.exists(filename):
         with open(filename, "r", encoding="utf-8") as f:
             return json.load(f)
@@ -34,17 +38,26 @@ def load_json_file(filename):
 
 # Save JSON data to a file
 def save_json_file(filename, data):
+    """
+    Save JSON data to a file with proper indentation.
+    """
     with open(filename, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
 
 
 # Pydantic models for structured outputs
 class PersonContact(BaseModel):
+    """
+    Model for storing contact information of a person.
+    """
     email: str
     phone: str
 
 
 class Person(BaseModel):
+    """
+    Model for storing information about a person in the People Directory.
+    """
     person_id: str
     name: str
     designation: str
@@ -55,13 +68,20 @@ class Person(BaseModel):
 
 
 class TaskPeople(BaseModel):
+    """
+    Model for storing people associated with a task.
+    """
     owner: str
     final_beneficiary: str
     stakeholders: List[str]
 
 
 class Task(BaseModel):
+    """
+    Model for storing task information.
+    """
     task_id: str
+    # Corresponds to the four task types defined in the blueprint
     type: Literal["1", "2", "3", "4"]
     description: str
     status: Literal["active", "pending", "completed"]
@@ -73,6 +93,9 @@ class Task(BaseModel):
 
 
 class Topic(BaseModel):
+    """
+    Model for storing knowledge base entries.
+    """
     topic_id: str
     name: str
     description: str
@@ -82,22 +105,32 @@ class Topic(BaseModel):
 
 
 class Instructions(BaseModel):
+    """
+    Model for storing instructions from the LLM response.
+    """
     status: Literal["incomplete", "complete"]
     followup: str
     new_prompt: str
 
 
 class Data(BaseModel):
+    """
+    Model for storing structured data from the LLM response.
+    """
     tasks: List[Task] = Field(default_factory=list)
     people: List[Person] = Field(default_factory=list)
     topics: List[Topic] = Field(default_factory=list)
 
 
 class LLMResponse(BaseModel):
+    """
+    Model for the complete LLM response, including instructions and data.
+    """
     instructions: Instructions
     data: Data
 
 
+# Load configuration and initialize OpenAI client
 config = load_config()
 client = OpenAI(api_key=config["openai_api_key"])
 
@@ -105,6 +138,11 @@ client = OpenAI(api_key=config["openai_api_key"])
 # Call OpenAI API with given messages
 def call_openai_api(system_prompt, datastore, conversation_history,
                     verbose=False):
+    """
+    Call the OpenAI API with the given system prompt, datastore, and
+    conversation history.
+    Returns a structured LLMResponse object.
+    """
     try:
         with console.status("[bold green]Thinking...", spinner="dots"):
             messages = [
@@ -132,6 +170,10 @@ def call_openai_api(system_prompt, datastore, conversation_history,
 
 # Process data received from the LLM
 def process_data(data):
+    """
+    Process the data received from the LLM, updating the JSON files for
+    people, tasks, and topics.
+    """
     # Load existing data from JSON files
     people = load_json_file("people.json")
     tasks = load_json_file("tasks.json")
@@ -172,8 +214,11 @@ def process_data(data):
     print_updates("topic", new_topics, updated_topics)
 
 
-# method prints tokens used in the conversation
+# Print token usage information
 def print_token_usage(usage):
+    """
+    Print the token usage information from the API response.
+    """
     console.print("[bold cyan]Token Usage:[/bold cyan]")
     console.print(f"  Prompt tokens: {usage.prompt_tokens}")
     console.print(f"  Completion tokens: {usage.completion_tokens}")
@@ -182,7 +227,11 @@ def print_token_usage(usage):
     console.print(f"  Total tokens: {usage.total_tokens}")
 
 
+# Print updates to the console
 def print_updates(entity_type, new_entries, updated_entries):
+    """
+    Print information about new and updated entries to the console.
+    """
     for entry in new_entries:
         name = entry.get('name', entry.get('description', 'Unknown'))
         console.print(
@@ -197,6 +246,9 @@ def print_updates(entity_type, new_entries, updated_entries):
 
 # Construct datastore for the LLM
 def construct_datastore():
+    """
+    Construct the datastore by loading data from JSON files.
+    """
     return {
         "people": load_json_file("people.json"),
         "tasks": load_json_file("tasks.json"),
@@ -206,6 +258,9 @@ def construct_datastore():
 
 # Get a summary of tasks, people, and topics entries
 def get_task_summary(verbose=False):
+    """
+    Get a summary of all tasks, people, and topics entries from the LLM.
+    """
     datastore = construct_datastore()
     current_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -235,6 +290,10 @@ def get_task_summary(verbose=False):
 
 # Main function to run the Sidekick assistant
 def main(verbose=False):
+    """
+    Main function to run the Sidekick assistant. Handles user interaction
+    and LLM communication.
+    """
     conversation_history = []
     thread_count = 0
 
