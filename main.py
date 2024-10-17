@@ -165,16 +165,16 @@ def call_openai_api(system_prompt, datastore, conversation_history,
 
             end_time = time.time()
             elapsed_time = end_time - start_time
+
             status.update(
                 f"[bold green]Completed in {elapsed_time:.2f} seconds"
             )
             time.sleep(1)  # Give users a moment to see the completion message
 
-            if verbose:
-                print_token_usage(completion.usage)
-
+            token_summary = print_token_usage(completion.usage, verbose)
             console.print(
-                f"[italic cyan]took {elapsed_time:.2f} seconds.[/italic cyan]"
+                f"[italic cyan]Sidekick took {elapsed_time:.2f} seconds to "
+                f"respond. {token_summary}[/italic cyan]"
             )
 
             return completion.choices[0].message.parsed
@@ -230,17 +230,30 @@ def process_data(data):
 
 
 # Print token usage information
-def print_token_usage(usage):
+def print_token_usage(usage, verbose=False):
     """
-    Print the token usage information from the API response.
+    Print the token usage information from the API response
+    and return a summary string.
     """
-    console.print("[bold cyan]Token Usage:[/bold cyan]")
-    console.print(f"  Prompt tokens: {usage.prompt_tokens}")
-    console.print(f"  Completion tokens: {usage.completion_tokens}")
-    console.print(
-        f"  Cached tokens: {usage.prompt_tokens_details.cached_tokens}"
-    )
-    console.print(f"  Total tokens: {usage.total_tokens}")
+    prompt_tokens = usage.prompt_tokens
+    completion_tokens = usage.completion_tokens
+    total_tokens = usage.total_tokens
+    cached_tokens = usage.prompt_tokens_details.cached_tokens
+    cached_percentage = (cached_tokens / prompt_tokens) * 100 \
+        if prompt_tokens > 0 else 0
+
+    summary = (f"{completion_tokens} tokens out, {prompt_tokens} tokens in "
+               f"({cached_percentage:.1f}% cached)")
+
+    if verbose:
+        console.print("[bold cyan]Token Usage:[/bold cyan]")
+        console.print(f"  Prompt tokens: {prompt_tokens}")
+        console.print(f"  Completion tokens: {completion_tokens}")
+        console.print(f"  Cached tokens: {cached_tokens}")
+        console.print(f"  Total tokens: {total_tokens}")
+        console.print(f"  Cached percentage: {cached_percentage:.1f}%")
+
+    return summary
 
 
 # Print updates to the console
@@ -347,7 +360,8 @@ def main(verbose=False):
 
         if user_input.lower() == "exit":
             break
-
+        if user_input.strip() == "":
+            continue
         conversation_history.append({"role": "user", "content": user_input})
         thread_count += 1
 
