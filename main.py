@@ -12,6 +12,7 @@ from rich.markdown import Markdown
 from pydantic import BaseModel, Field
 from typing import List, Literal
 import argparse
+import time
 
 
 # Load configuration from YAML file
@@ -143,8 +144,10 @@ def call_openai_api(system_prompt, datastore, conversation_history,
     conversation history.
     Returns a structured LLMResponse object.
     """
+    start_time = time.time()
     try:
-        with console.status("[bold green]Thinking...", spinner="dots"):
+        with console.status("[bold green]Thinking...",
+                            spinner="dots") as status:
             messages = [
                 {"role": "system", "content": system_prompt},
                 {
@@ -159,8 +162,20 @@ def call_openai_api(system_prompt, datastore, conversation_history,
                 messages=messages,
                 response_format=LLMResponse,
             )
+
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+            status.update(
+                f"[bold green]Completed in {elapsed_time:.2f} seconds"
+            )
+            time.sleep(1)  # Give users a moment to see the completion message
+
             if verbose:
                 print_token_usage(completion.usage)
+
+            console.print(
+                f"[italic cyan]took {elapsed_time:.2f} seconds.[/italic cyan]"
+            )
 
             return completion.choices[0].message.parsed
     except Exception as e:
@@ -223,7 +238,8 @@ def print_token_usage(usage):
     console.print(f"  Prompt tokens: {usage.prompt_tokens}")
     console.print(f"  Completion tokens: {usage.completion_tokens}")
     console.print(
-        f"  Cached tokens: {usage.prompt_tokens_details.cached_tokens}")
+        f"  Cached tokens: {usage.prompt_tokens_details.cached_tokens}"
+    )
     console.print(f"  Total tokens: {usage.total_tokens}")
 
 

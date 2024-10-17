@@ -103,24 +103,9 @@ system_prompt: |
   8. Always reference the externally provided datastore when checking for existing entities or information (id being the key)
   9. Do not include the datastore in your response JSON; only use it for reference
 
-  ### Examples:
+  ### Example:
 
-  1. Stage 1 Interaction:
-
-  User: "I need to set up a meeting with John about the new project."
-
-  Response:
-  {
-    "instructions": {
-      "status": "incomplete",
-      "followup": "Certainly, I can help you set up a meeting with John about the new project. To proceed, I need some additional information:\n1. When would you like to schedule this meeting?\n2. How long should the meeting be?\n3. Are there any specific topics you want to cover in this meeting?\n4. Do you have a preferred location or should it be a virtual meeting?",
-    },
-    "data": {}
-  }
-
-  2. Stage 2 Entity Extraction:
-
-  User: "The meeting with John should be next Monday at 2 PM for an hour. We'll discuss the project timeline and budget allocation. It will be a virtual meeting."
+  User: "I need to set up a meeting with John about the new project next Monday at 2 PM for an hour. We'll discuss the project timeline and budget allocation. It will be a virtual meeting."
 
   Response:
   {
@@ -156,77 +141,6 @@ system_prompt: |
           "keywords": ["project timeline", "budget allocation"],
           "related_people": ["John Doe", "User"],
           "related_tasks": ["T001"]
-        }
-      ]
-    }
-  }
-
-  3. Multi-turn Conversation:
-
-  User: "I need to organize a team-building event for our department."
-
-  Response:
-  {
-    "instructions": {
-      "status": "incomplete",
-      "followup": "Certainly! I'd be happy to help you organize a team-building event for your department. To get started, could you please provide me with the following information:\n1. How many people are in your department?\n2. Do you have a specific date or time frame in mind for the event?\n3. Is there a budget allocated for this event?\n4. Are there any particular activities or themes you're interested in for the team-building?",
-    },
-    "data": {}
-  }
-
-  User: "We have about 20 people in the department. I'm thinking sometime next month, maybe a full-day event on a Friday. Budget is around $2000. I was considering some outdoor activities."
-
-  Response:
-  {
-    "instructions": {
-      "status": "incomplete",
-      "followup": "Thank you for providing those details. It's helpful to know about the team size, timeframe, budget, and preference for outdoor activities. To move forward with planning, I have a few more questions:\n1. Do you have a specific Friday in mind next month, or should I suggest some dates?\n2. Are there any team members with mobility issues or dietary restrictions we should consider?\n3. Would you prefer a single location for all activities, or are you open to multiple venues?\n4. Should I research and suggest some specific outdoor team-building activities, or do you have any particular ones in mind?",
-    },
-    "data": {}
-  }
-
-  User: "Let's aim for the second Friday of next month. No mobility issues, but please ensure we have vegetarian options. A single location would be ideal. And yes, please suggest some activities."
-
-  Response:
-  {
-    "instructions": {
-      "status": "complete",
-      "followup": "Great, I've gathered all the necessary information to start planning the team-building event. I've created a task for organizing this event and added the relevant details. Would you like me to start researching suitable venues and activities based on your requirements?",
-      "new_prompt": "Should I create a preliminary schedule for the team-building day and share it with you for approval?"
-    },
-    "data": {
-      "tasks": [
-        {
-          "task_id": "T002",
-          "type": "3",
-          "description": "Organize department team-building event",
-          "status": "active",
-          "actions": [
-            "Research and book venue",
-            "Plan outdoor activities",
-            "Arrange catering with vegetarian options",
-            "Send invitations to team members",
-            "Prepare event schedule"
-          ],
-          "people": {
-            "owner": "User",
-            "final_beneficiary": "Department",
-            "stakeholders": ["User", "Department members"]
-          },
-          "dependencies": [],
-          "schedule": "2024-11-08 09:00",
-          "priority": "medium"
-        }
-      ],
-      "people": [],
-      "topics": [
-        {
-          "topic_id": "K002",
-          "name": "Team-building Event",
-          "description": "Full-day outdoor team-building event for the department",
-          "keywords": ["team-building", "outdoor activities", "department event"],
-          "related_people": ["User", "Department members"],
-          "related_tasks": ["T002"]
         }
       ]
     }
