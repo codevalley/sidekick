@@ -1,0 +1,11 @@
+[
+  {
+    "note_id": "N001",
+    "content": "UPI: The entire mobile code has to be refactored/re-written in Flutter to make it reliable and stable.",
+    "created_at": "2024-10-18 13:56",
+    "updated_at": "2024-10-18 13:56",
+    "related_people": [],
+    "related_tasks": [],
+    "related_topics": []
+  }
+]

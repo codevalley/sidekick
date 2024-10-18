@@ -105,6 +105,19 @@ class Topic(BaseModel):
     related_tasks: List[str]
 
 
+class Note(BaseModel):
+    """
+    Model for storing note information.
+    """
+    note_id: str
+    content: str
+    created_at: str
+    updated_at: str
+    related_people: List[str]
+    related_tasks: List[str]
+    related_topics: List[str]
+
+
 class AffectedEntities(BaseModel):
     """
     Model for storing affected entities from the LLM response.
@@ -112,6 +125,7 @@ class AffectedEntities(BaseModel):
     tasks: List[str] = Field(default_factory=list)
     people: List[str] = Field(default_factory=list)
     topics: List[str] = Field(default_factory=list)
+    notes: List[str] = Field(default_factory=list)
 
 
 class Instructions(BaseModel):
@@ -132,6 +146,7 @@ class Data(BaseModel):
     tasks: List[Task] = Field(default_factory=list)
     people: List[Person] = Field(default_factory=list)
     topics: List[Topic] = Field(default_factory=list)
+    notes: List[Note] = Field(default_factory=list)
 
 
 class LLMResponse(BaseModel):
@@ -189,6 +204,9 @@ def call_openai_api(system_prompt, datastore, conversation_history,
                 f"respond. {token_summary}[/italic cyan]"
             )
 
+            if verbose:
+                print(completion.choices[0].message.parsed)
+
             return completion.choices[0].message.parsed
     except Exception as e:
         console.print(f"[bold red]Error:[/bold red] {str(e)}")
@@ -199,12 +217,13 @@ def call_openai_api(system_prompt, datastore, conversation_history,
 def process_data(data, affected_entities):
     """
     Process the data received from the LLM, updating the JSON files for
-    people, tasks, and topics.
+    people, tasks, topics, and notes.
     """
     # Load existing data from JSON files
     people = load_json_file("people.json")
     tasks = load_json_file("tasks.json")
     topics = load_json_file("topics.json")
+    notes = load_json_file("notes.json")
 
     # Helper function to update or add new items to a list
     def update_or_add(existing_list, new_items, id_field):
@@ -220,7 +239,7 @@ def process_data(data, affected_entities):
         return list(id_to_item.values()), new_entries, updated_entries
 
     try:
-        # Update people, tasks, and topics
+        # Update people, tasks, topics, and notes
         people, new_people, updated_people = update_or_add(
             people, [person.dict() for person in data.people], "person_id"
         )
@@ -230,11 +249,15 @@ def process_data(data, affected_entities):
         topics, new_topics, updated_topics = update_or_add(
             topics, [topic.dict() for topic in data.topics], "topic_id"
         )
+        notes, new_notes, updated_notes = update_or_add(
+            notes, [note.dict() for note in data.notes], "note_id"
+        )
 
         # Save updated data to JSON files
         save_json_file("people.json", people)
         save_json_file("tasks.json", tasks)
         save_json_file("topics.json", topics)
+        save_json_file("notes.json", notes)
 
         # Print updates to console only if there are writes
         if affected_entities.people:
@@ -243,6 +266,8 @@ def process_data(data, affected_entities):
             print_updates("task", new_tasks, updated_tasks)
         if affected_entities.topics:
             print_updates("topic", new_topics, updated_topics)
+        if affected_entities.notes:
+            print_updates("note", new_notes, updated_notes)
 
     except Exception as e:
         console.print(f"[bold red]Error processing data:[/bold red] {str(e)}")
@@ -282,12 +307,14 @@ def print_updates(entity_type, new_entries, updated_entries):
     Print information about new and updated entries to the console.
     """
     for entry in new_entries:
-        name = entry.get('name', entry.get('description', 'Unknown'))
+        name = entry.get('name', entry.get('description',
+                                           entry.get('content', 'Unknown')))
         console.print(
             f"[bold green]Added a new {entity_type}:[/bold green] {name}"
         )
     for entry in updated_entries:
-        name = entry.get('name', entry.get('description', 'Unknown'))
+        name = entry.get('name', entry.get('description',
+                                           entry.get('content', 'Unknown')))
         console.print(
             f"[bold yellow]Updated {entity_type}:[/bold yellow] {name}"
         )
@@ -302,13 +329,14 @@ def construct_datastore():
         "people": load_json_file("people.json"),
         "tasks": load_json_file("tasks.json"),
         "topics": load_json_file("topics.json"),
+        "notes": load_json_file("notes.json"),
     }
 
 
-# Get a summary of tasks, people, and topics entries
+# Get a summary of tasks, people, topics, and notes entries
 def get_task_summary(verbose=False):
     """
-    Get a summary of all tasks, people, and topics entries from the LLM.
+    Get a summary of all tasks, people, topics, and notes entries from the LLM.
     """
     datastore = construct_datastore()
     current_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -321,7 +349,7 @@ def get_task_summary(verbose=False):
         {
             "role": "user",
             "content": (
-                "Provide an overview of all tasks, people, and topics entries."
+                "Provide an overview of all tasks, people, topics, and notes"
             ),
         },
     ]
