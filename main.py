@@ -105,6 +105,15 @@ class Topic(BaseModel):
     related_tasks: List[str]
 
 
+class AffectedEntities(BaseModel):
+    """
+    Model for storing affected entities from the LLM response.
+    """
+    tasks: List[str] = Field(default_factory=list)
+    people: List[str] = Field(default_factory=list)
+    topics: List[str] = Field(default_factory=list)
+
+
 class Instructions(BaseModel):
     """
     Model for storing instructions from the LLM response.
@@ -112,6 +121,8 @@ class Instructions(BaseModel):
     status: Literal["incomplete", "complete"]
     followup: str
     new_prompt: str
+    write: bool
+    affected_entities: AffectedEntities
 
 
 class Data(BaseModel):
@@ -146,8 +157,9 @@ def call_openai_api(system_prompt, datastore, conversation_history,
     """
     start_time = time.time()
     try:
-        with console.status("[bold green]Thinking...",
-                            spinner="dots") as status:
+        with console.status(
+            "[bold green]Thinking...", spinner="dots"
+        ) as status:
             messages = [
                 {"role": "system", "content": system_prompt},
                 {
@@ -184,7 +196,7 @@ def call_openai_api(system_prompt, datastore, conversation_history,
 
 
 # Process data received from the LLM
-def process_data(data):
+def process_data(data, affected_entities):
     """
     Process the data received from the LLM, updating the JSON files for
     people, tasks, and topics.
@@ -207,26 +219,34 @@ def process_data(data):
             id_to_item[new_item[id_field]] = new_item
         return list(id_to_item.values()), new_entries, updated_entries
 
-    # Update people, tasks, and topics
-    people, new_people, updated_people = update_or_add(
-        people, [person.dict() for person in data.people], "person_id"
-    )
-    tasks, new_tasks, updated_tasks = update_or_add(
-        tasks, [task.dict() for task in data.tasks], "task_id"
-    )
-    topics, new_topics, updated_topics = update_or_add(
-        topics, [topic.dict() for topic in data.topics], "topic_id"
-    )
+    try:
+        # Update people, tasks, and topics
+        people, new_people, updated_people = update_or_add(
+            people, [person.dict() for person in data.people], "person_id"
+        )
+        tasks, new_tasks, updated_tasks = update_or_add(
+            tasks, [task.dict() for task in data.tasks], "task_id"
+        )
+        topics, new_topics, updated_topics = update_or_add(
+            topics, [topic.dict() for topic in data.topics], "topic_id"
+        )
 
-    # Save updated data to JSON files
-    save_json_file("people.json", people)
-    save_json_file("tasks.json", tasks)
-    save_json_file("topics.json", topics)
+        # Save updated data to JSON files
+        save_json_file("people.json", people)
+        save_json_file("tasks.json", tasks)
+        save_json_file("topics.json", topics)
 
-    # Print updates to console
-    print_updates("contact", new_people, updated_people)
-    print_updates("task", new_tasks, updated_tasks)
-    print_updates("topic", new_topics, updated_topics)
+        # Print updates to console only if there are writes
+        if affected_entities.people:
+            print_updates("contact", new_people, updated_people)
+        if affected_entities.tasks:
+            print_updates("task", new_tasks, updated_tasks)
+        if affected_entities.topics:
+            print_updates("topic", new_topics, updated_topics)
+
+    except Exception as e:
+        console.print(f"[bold red]Error processing data:[/bold red] {str(e)}")
+        console.print("No changes were made to the data files.")
 
 
 # Print token usage information
@@ -399,21 +419,30 @@ def main(verbose=False):
 
         # Process data if the conversation is complete
         if instructions.status == "complete":
-            process_data(data)
-            conversation_history = []
-            thread_count = 0
-            console.print(
-                "[bold green]Thread completed. "
-                "Starting new conversation.[/bold green]"
-            )
-
-            if instructions.new_prompt:
+            try:
+                process_data(data, instructions.affected_entities)
+                conversation_history = []
+                thread_count = 0
                 console.print(
-                    Panel(
-                        instructions.new_prompt,
-                        title="New Suggestion",
-                        border_style="green",
+                    "[bold green]Thread completed. "
+                    "Starting new conversation.[/bold green]"
+                )
+
+                if instructions.new_prompt:
+                    console.print(
+                        Panel(
+                            instructions.new_prompt,
+                            title="New Suggestion",
+                            border_style="green",
+                        )
                     )
+            except Exception as e:
+                console.print(
+                    f"[bold red]Error processing data:[/bold red] {str(e)}"
+                )
+                console.print(
+                    "The conversation will continue, but no changes were "
+                    "made to the data."
                 )
 
 
