@@ -337,6 +337,35 @@ def get_task_summary(verbose=False):
     )
 
 
+def display_llm_response(instructions):
+    """
+    Display the LLM response using Rich's Markdown rendering.
+    """
+    try:
+        followup_md = Markdown(instructions.followup)
+        console.print(
+            Panel(followup_md, title="Sidekick", border_style="blue")
+        )
+
+        if instructions.new_prompt:
+            new_prompt_md = Markdown(instructions.new_prompt)
+            console.print(
+                Panel(
+                    new_prompt_md,
+                    title="New Suggestion",
+                    border_style="green"
+                )
+            )
+    except Exception as e:
+        console.print(
+            f"[bold red]Error displaying response:[/bold red] {str(e)}"
+        )
+        console.print("Displaying raw response:")
+        console.print(instructions.followup)
+        if instructions.new_prompt:
+            console.print(instructions.new_prompt)
+
+
 # Main function to run the Sidekick assistant
 def main(verbose=False):
     """
@@ -408,13 +437,10 @@ def main(verbose=False):
         data = llm_response.data
 
         # Display LLM response
-        markdown_followup = Markdown(instructions.followup)
-        console.print(
-            Panel(markdown_followup, title="Sidekick", border_style="blue")
-        )
+        display_llm_response(instructions)
 
         conversation_history.append(
-            {"role": "assistant", "content": llm_response.json()}
+            {"role": "assistant", "content": llm_response.model_dump_json()}
         )
 
         # Process data if the conversation is complete
@@ -428,14 +454,6 @@ def main(verbose=False):
                     "Starting new conversation.[/bold green]"
                 )
 
-                if instructions.new_prompt:
-                    console.print(
-                        Panel(
-                            instructions.new_prompt,
-                            title="New Suggestion",
-                            border_style="green",
-                        )
-                    )
             except Exception as e:
                 console.print(
                     f"[bold red]Error processing data:[/bold red] {str(e)}"
